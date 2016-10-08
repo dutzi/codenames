@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Codenames</title>
+	<style>
+body {
+    font-family: arial;
+}
+
+.clearfix {
+	clear: none;
+}
+
+.game .words div {
+	text-transform: capitalize;
+    width: calc(20% - 34px);
+    padding: 13px;
+    float: left;
+    height: 10vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    margin: 4px;
+    font-size: 1.4em;
+    cursor: pointer;
+    text-align: center;
+    word-break: break-all;
+    transition: all 0.1s ease-out;
+}
+.game .words div.c0:hover {
+	transform: scale(1.05);
+}
+.game .words div.c0 {
+	background: linear-gradient(#FFC107, #FF9800);
+	color: black;
+}
+.game .words div.c1 {
+	background: #9E9E9E;
+	color: #9E9E9E;
+    -webkit-user-select: none;
+
+}
+.game .words div.c2 {
+	background: #F44336;
+	color: #F44336;
+    -webkit-user-select: none;
+
+}
+.game .words div.c3 {
+	background: #2196F3;
+	color: #2196F3;
+    -webkit-user-select: none;
+}
+.game .words div.c4 {
+	background: black;
+	color: black;
+    -webkit-user-select: none;
+}
+.timer {
+    position: absolute;
+    bottom: 20px;
+    width: 200px;
+    left: 50%;
+    margin-left: -100px;
+    text-align: center;
+    font-size: 3em;
+    font-family: arial;
+    background: #eee;
+    border-radius: 10px;
+}
+input {
+	width: 100%;
+	padding: 10px;
+	font-size: 1.4em;
+	border: 1px solid #ddd;
+	border-radius: 5px;
+}
+
+.btnGreen {
+	border: none;
+	background: #8BC34A;
+	padding: 10px 20px;
+	font-size: 1.5em;
+	color: white;
+	border-radius: 5px;
+}
+
+.btnRed {
+	border: none;
+	background: #FF5722;
+	padding: 10px 20px;
+	font-size: 1.5em;
+	color: white;
+	border-radius: 5px;
+}
+
+.btnBlack {
+	border: none;
+	padding: 10px 20px;
+	font-size: 1.5em;
+	color: #00BCD4;
+	background: white;
+	border: 2px solid #00BCD4;
+	border-radius: 5px;
+	float: right;
+}
+
+.map .tile {
+    width: calc(20% - 8px);
+    background: black;
+    border-radius: 4px;
+    margin: 4px;
+    float: left;
+    height: 10vh;
+    padding: 13px 0px;
+}
+
+.map .tile-0 {
+	background: #9E9E9E;
+}
+
+.map .tile-1 {
+	background: #F44336;
+}
+
+.map .tile-2 {
+	background: #2196F3;
+}
+
+.map .tile-3 {
+	background: black;
+}
+
+.mapLink {
+	display: inline-block;
+	margin: 10px;
+	color: black;
+	text-decoration: none;
+	border-bottom: 2px dashed #2196F3;
+	padding: 5px 6px 3px;
+	background: rgba(3, 169, 244, 0.13);
+}
+
+.toolbar {
+	display: flex;
+	width: 100%;
+	margin-bottom: 10px;
+	opacity: 0.3;
+	transition: all 0.2s;
+}
+
+.toolbar:hover {
+	opacity: 1;
+}
+
+.words {
+	margin-bottom: 10px;
+}
+
+.toolbar button {
+	margin-left: 10px;
+}
+
+.toolbar button:first-child {
+	margin: 0px;
+}
+
+.mapLinkContainer {
+	position: relative;
+	flex: 1;
+}
+
+.qrCodeContainer {
+	position: absolute;
+	bottom: 80px;
+	padding: 10px;
+	background: white;
+	border: 1px solid black;
+	box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.41);
+	left: 10px;
+	opacity: 0;
+	pointer-events: none;
+	transition: all 0.2s;
+}
+
+.mapLinkContainer:hover .qrCodeContainer {
+	opacity: 1;
+}
+	</style>
+</head>
+<body>
+	<span class='game'>
+		<span class='words'></span>
+
+		<div class='toolbar'>
+			<input onKeyUp='onWordsChange(event)' type='text' placeholder='Enter words' />
+			<button class='btnBlack' onClick='window.generateWords()'>Generate</button>
+		</div>
+
+		<div class='toolbar'>
+			<button class='btnGreen' onClick='window.startTimer()'>Start Timer</button>
+			<button class='btnRed' onClick='window.stopTimer()'>Stop Timer</button>
+			<div class='mapLinkContainer'>
+				<div class='qrCodeContainer'></div>
+				<a class='mapLink' target='_blank'></a>
+			</div>
+			<button class='btnBlack' onClick='window.clearAll()'>Reset</button>
+		</div>
+
+		<span class='timer'></span>
+	</span>
+	<span class='map'></span>
+</body>
+
+<script type="text/javascript">
+
+function onWordsChange(event) {
+	setWords(event.currentTarget.value);
+}
+
+function setWords(words) {
+	localStorage.setItem('words', words);
+	words = words.split(',')
+	let $words = document.querySelector('.words');
+	$words.innerHTML = '';
+	words.forEach(word => $words.innerHTML += `<div class="c0">${word}</div>`);
+	$words.innerHTML += '<span>&nbsp;</span>';
+
+	Array.prototype.slice.call(document.querySelectorAll('.game .words div')).forEach((div, index) => {
+		div.addEventListener('click', (e) => {
+			if (e.shiftKey || e.metaKey || e.ctrlKey) {
+				div.className = {
+					'0': 'c1',
+					'1': 'c2',
+					'2': 'c3',
+					'3': 'c4',
+				}[window.map[index]];
+			} else {
+				div.className = 'c' + (parseInt(div.className.substr(1)) + 1) % 4;
+			}
+			window.save();
+		})
+	})
+}
+
+window.load = () => {
+	(localStorage.getItem('map') || '').split(',').forEach((cn, index) => {
+		if (cn) {
+		 	document.querySelectorAll('.game .words div')[index].className = cn
+		}
+	});
+}
+
+window.save = () => {
+	localStorage.setItem('map', Array.prototype.slice.call(
+		document.querySelectorAll('.game .words div')).map(div => {
+
+		return div.className
+	}))
+}
+
+window.clearAll = () => {
+	Array.prototype.slice.call(document.querySelectorAll('.game .words div')).forEach(div => {
+		div.className = 'c0'
+	});
+	localStorage.setItem('map', '');
+}
+
+window.startTimer = () => {
+	window.time = 0;
+	document.querySelector('.timer').innerHTML = '0s';
+	window.timer = setInterval(() => {
+	 	document.querySelector('.timer').innerHTML = ++window.time + 's'
+	}, 1000)
+}
+
+window.stopTimer = () => {
+	clearInterval(window.timer);
+	document.querySelector('.timer').innerHTML = ''
+}
+
+window.loadWords = () => {
+	let words = localStorage.getItem('words') || 'Broom, Crotch, Kenneth, Mantua, Monasticism, Particle, Range, Scarification, Sitar, Thumb, Anesthesiology, David, Engine, Epee, Flintlock, High-rise, Mambo, Playground, Swivel, Trowel, Brome, Committee, Garlic, Honey, Leader';
+	document.querySelector('input').value = words;
+	setWords(words);
+}
+
+window.encodeMap = (decodedMap) => {
+	let binary = '0000' + decodedMap.split('').map(char => ({
+		'0': '00',
+		'1': '01',
+		'2': '10',
+		'3': '11',
+	}[char])).join('');
+
+	let ret = ''
+
+	for (var i = 0; i < 54; i += 6) {
+		let binChar = binary.slice(i, i + 6);
+		let intChar = parseInt(binChar, 2);
+		let char;
+
+		if (intChar < 26) {
+			char = String.fromCharCode('A'.charCodeAt(0) + intChar)
+		} else if (intChar < 52) {
+			char = String.fromCharCode('a'.charCodeAt(0) + intChar - 26)
+		} else if (intChar < 62) {
+			char = String.fromCharCode('0'.charCodeAt(0) + intChar - 52)
+		} else if (intChar === 62) {
+			char = '+'
+		} else {
+			char = '/'
+		}
+
+		ret += char;
+	}
+
+	return ret;
+}
+
+function dec2bin(dec) {
+    return (dec >>> 0).toString(2);
+}
+
+function padder(input) {
+	var pad = '000000';
+	return (pad + input).slice(-pad.length);
+}
+
+window.decodeMap = (encodedMap) => {
+	let chars = encodedMap.split('');
+
+	let binary = chars.map(char => {
+		if (char === '/') {
+			return 63
+		} else if (char === '+') {
+			return 62
+		} else if (char <= '9') {
+			return char.charCodeAt(0) - '0'.charCodeAt(0) + 52
+		} else if (char <= 'Z') {
+			return char.charCodeAt(0) - 'A'.charCodeAt(0)
+		} else if (char <= 'z') {
+			return char.charCodeAt(0) - 'a'.charCodeAt(0) + 26
+		}
+	}).map(dec2bin).map(padder).join('').slice(4);
+
+	let ret = '';
+
+	for (var i = 0; i < 50; i += 2) {
+		ret += {
+			'00': '0',
+			'01': '1',
+			'10': '2',
+			'11': '3',
+		}[binary.slice(i, i + 2)];
+	}
+
+	return ret;
+}
+
+window.renderMap = (map) => {
+	document.querySelector('.game').style.display = 'none';
+	let $map = document.querySelector('.map');
+
+	map.split('').forEach(tileCode => {
+		$map.innerHTML += `<div class='tile tile-${tileCode}'></div>`;
+	})
+}
+
+window.generateMap = () => {
+	let map = '0000000000000000000000000'.split(''),
+		numRed, numBlue, numBlack = 1;
+
+	if (Math.random() < 0.5) {
+		numRed = 9;
+		numBlue = 8;
+	} else {
+		numRed = 8;
+		numBlue = 9;
+	}
+
+	while (numRed) {
+		let pos = Math.floor(Math.random() * 25);
+		if (map[pos] === '0') {
+			map[pos] = '1';
+			numRed--;
+		}
+	}
+
+	while (numBlue) {
+		let pos = Math.floor(Math.random() * 25);
+		if (map[pos] === '0') {
+			map[pos] = '2';
+			numBlue--;
+		}
+	}
+
+	while (numBlack) {
+		let pos = Math.floor(Math.random() * 25);
+		if (map[pos] === '0') {
+			map[pos] = '3';
+			numBlack--;
+		}
+	}
+
+	return map;
+}
+
+window.renderMapLink = (encodedMap) => {
+	let $mapLink = document.querySelector('.mapLink')
+	let $qrCodeContainer = document.querySelector('.qrCodeContainer')
+
+	let urlSearch = '?m=' + encodedMap;
+
+	let urlHref = location.href.indexOf('codepen.io') === -1
+		? location.href
+		: 'http://codepen.io/dutzi/full/bwLVRp/'
+
+	let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${urlHref + urlSearch}`;
+
+	$mapLink.innerHTML = urlHref + '?m=<b>' + encodedMap + '</b>';
+	$mapLink.href = urlHref + urlSearch;
+
+	$qrCodeContainer.innerHTML = `<img src='${qrUrl}'/>`;
+}
+
+function startGame() {
+	window.loadWords();
+	window.load();
+	window.map = window.generateMap();
+	window.renderMapLink(encodeMap(window.map.join('')));
+}
+
+window.generateWords = () => {
+	let words = [], wordsObj = {}, numWords = 0;
+
+	while (numWords < 25) {
+		let word = window.nouns[Math.floor(Math.random() * window.nouns.length)];
+		if (!wordsObj[word]) {
+			wordsObj[word] = true;
+			words.push(word);
+			numWords++;
+		}
+	}
+
+	localStorage.setItem('words', words.join(', '));
+	startGame();
+}
+
+if (location.search.indexOf('?m=') > -1) {
+	window.renderMap(window.decodeMap(location.search.slice(location.search.indexOf('=') + 1)));
+} else {
+	startGame();
+}
+
+window.nouns = ['people','history','way','art','world','information','map','two','family','government','health','system','computer','meat','year','thanks','music','person','reading','method','data','food','understanding','theory','law','bird','literature','problem','software','control','knowledge','power','ability','economics','love','internet','television','science','library','nature','fact','product','idea','temperature','investment','area','society','activity','story','industry','media','thing','oven','community','definition','safety','quality','development','language','management','player','variety','video','week','security','country','exam','movie','organization','equipment','physics','analysis','policy','series','thought','basis','boyfriend','direction','strategy','technology','army','camera','freedom','paper','environment','child','instance','month','truth','marketing','university','writing','article','department','difference','goal','news','audience','fishing','growth','income','marriage','user','combination','failure','meaning','medicine','philosophy','teacher','communication','night','chemistry','disease','disk','energy','nation','road','role','soup','advertising','location','success','addition','apartment','education','math','moment','painting','politics','attention','decision','event','property','shopping','student','wood','competition','distribution','entertainment','office','population','president','unit','category','cigarette','context','introduction','opportunity','performance','driver','flight','length','magazine','newspaper','relationship','teaching','cell','dealer','finding','lake','member','message','phone','scene','appearance','association','concept','customer','death','discussion','housing','inflation','insurance','mood','woman','advice','blood','effort','expression','importance','opinion','payment','reality','responsibility','situation','skill','statement','wealth','application','city','county','depth','estate','foundation','grandmother','heart','perspective','photo','recipe','studio','topic','collection','depression','imagination','passion','percentage','resource','setting','ad','agency','college','connection','criticism','debt','description','memory','patience','secretary','solution','administration','aspect','attitude','director','personality','psychology','recommendation','response','selection','storage','version','alcohol','argument','complaint','contract','emphasis','highway','loss','membership','possession','preparation','steak','union','agreement','cancer','currency','employment','engineering','entry','interaction','mixture','preference','region','republic','tradition','virus','actor','classroom','delivery','device','difficulty','drama','election','engine','football','guidance','hotel','owner','priority','protection','suggestion','tension','variation','anxiety','atmosphere','awareness','bath','bread','candidate','climate','comparison','confusion','construction','elevator','emotion','employee','employer','guest','height','leadership','mall','manager','operation','recording','sample','transportation','charity','cousin','disaster','editor','efficiency','excitement','extent','feedback','guitar','homework','leader','mom','outcome','permission','presentation','promotion','reflection','refrigerator','resolution','revenue','session','singer','tennis','basket','bonus','cabinet','childhood','church','clothes','coffee','dinner','drawing','hair','hearing','initiative','judgment','lab','measurement','mode','mud','orange','poetry','police','possibility','procedure','queen','ratio','relation','restaurant','satisfaction','sector','signature','significance','song','tooth','town','vehicle','volume','wife','accident','airport','appointment','arrival','assumption','baseball','chapter','committee','conversation','database','enthusiasm','error','explanation','farmer','gate','girl','hall','historian','hospital','injury','instruction','maintenance','manufacturer','meal','perception','pie','poem','presence','proposal','reception','replacement','revolution','river','son','speech','tea','village','warning','winner','worker','writer','assistance','breath','buyer','chest','chocolate','conclusion','contribution','cookie','courage','dad','desk','drawer','establishment','examination','garbage','grocery','honey','impression','improvement','independence','insect','inspection','inspector','king','ladder','menu','penalty','piano','potato','profession','professor','quantity','reaction','requirement','salad','sister','supermarket','tongue','weakness','wedding','affair','ambition','analyst','apple','assignment','assistant','bathroom','bedroom','beer','birthday','celebration','championship','cheek','client','consequence','departure','diamond','dirt','ear','fortune','friendship','funeral','gene','girlfriend','hat','indication','intention','lady','midnight','negotiation','obligation','passenger','pizza','platform','poet','pollution','recognition','reputation','shirt','sir','speaker','stranger','surgery','sympathy','tale','throat','trainer','uncle','youth'];
+</script>
+</html>
